@@ -1,11 +1,10 @@
 /*jshint esversion: 6 */
 "use strict";
 
-var objectAssign = require('object-assign');
+const objectAssign = require('object-assign');
+const postcss = require('postcss');
 
-var postcss = require('postcss');
-
-var defaults = {
+const defaults = {
   breakpoints: [
     {name: 'xs', max: 767},
     {name: 'sm', min: 768, max: 1023},
@@ -15,40 +14,26 @@ var defaults = {
   ],
 
   unit: 'px', // rem, em
-  prefix: '#'
+  prefix: '',
 
-  // breakpoints: {
-  //   xs: {max: 767},
-  //   sm: {min: 768, max: 1023},
-  //   smMin: {min: 768},
-  //   smMax: {max: 1023},
-  //   md: {min: 1024, max: 1199},
-  //   mdMin: {min: 1024},
-  //   mdMax: {max: 1199},
-  //   lg: {min: 1200, max: 1599},
-  //   lgMin: {min: 1200},
-  //   lgMax: {max: 1599},
-  //   xl: {min: 1600}
-  // }
+  templates: {
+    min: '(min-width: %min%%unit%)',
+    max: '(max-width: %max%%unit%)',
+    minMax: '(min-width: %min%%unit%) and (max-width: %max%%unit%)'
+  }
+
 };
 
-var templates = {
-  min: '@media(min-width: %min%%unit%)',
-  max: '@media(max-width: %max%%unit%)',
-  minMax: '@media(min-width: %min%%unit%) and (max-width: %max%%unit%)'
-};
+let breakpoints = {};
 
-
-var breakpoints = {};
-
-function generateBreakpoints(values, unit) {
+function generateBreakpoints(values, unit, prefix, templates) {
   let result = [];
 
   values.forEach(breakpoint => {
 
     if (!breakpoint.min && breakpoint.max) {
       result.push({
-        name: breakpoint.name,
+        name: prefix + breakpoint.name,
         selector: templates.max
           .replace('%max%', breakpoint.max)
           .replace(/%unit%/g, unit)
@@ -56,19 +41,19 @@ function generateBreakpoints(values, unit) {
     }
     else if (breakpoint.min && breakpoint.max) {
       result.push({
-        name: breakpoint.name + '-min',
+        name: prefix + breakpoint.name + '-min',
         selector: templates.min
           .replace('%min%', breakpoint.min)
           .replace(/%unit%/g, unit)
       });
       result.push({
-        name: breakpoint.name + '-max',
+        name: prefix + breakpoint.name + '-max',
         selector: templates.max
           .replace('%max%', breakpoint.max)
           .replace(/%unit%/g, unit)
       });
       result.push({
-        name: breakpoint.name,
+        name: prefix + breakpoint.name,
         selector: templates.minMax
         .replace('%min%', breakpoint.min)
         .replace('%max%', breakpoint.max)
@@ -77,7 +62,7 @@ function generateBreakpoints(values, unit) {
     }
     else if (breakpoint.min && !breakpoint.max) {
       result.push({
-        name: breakpoint.name,
+        name: prefix + breakpoint.name,
         selector: templates.min
           .replace('%min%', breakpoint.min)
           .replace(/%unit%/g, unit)
@@ -95,24 +80,17 @@ module.exports = postcss.plugin('mediaQueryShorthand', function myplugin(options
 
     options = objectAssign({}, defaults, options);
 
-    breakpoints = generateBreakpoints(options.breakpoints, options.unit);
+    breakpoints = generateBreakpoints(options.breakpoints, options.unit, options.prefix, options.templates);
 
-    console.log(breakpoints);
-
-    css.walkRules(function (rule) {
-      console.log(rule.selector);
-
-
-
-      rule.selector.replace()
-
-      // rule.walkDecls(function (decl, i) {
-      //
-      // });
+    css.walkAtRules(function (rule) {
+      // console.log(rule.selector);
+      breakpoints.forEach(breakpoint => {
+        if (breakpoint.name === rule.name) {
+          rule.name = 'media';
+          rule.params = breakpoint.selector;
+        }
+      });
     });
-
-    // Processing code will be added here
-
   };
 
 });
