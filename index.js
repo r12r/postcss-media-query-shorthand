@@ -83,7 +83,6 @@ module.exports = postcss.plugin('mediaQueryShorthand', function myplugin(options
     breakpoints = generateBreakpoints(options.breakpoints, options.unit, options.prefix, options.templates);
 
     css.walkAtRules(function (rule) {
-      // console.log(rule.selector);
       breakpoints.forEach(breakpoint => {
         if (breakpoint.name === rule.name) {
           rule.name = 'media';
